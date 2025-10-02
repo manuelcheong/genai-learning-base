@@ -37,7 +37,7 @@ services:
       agentkit-orchestrator-agent:
         condition: service_healthy
     build:
-      context: app
+      context: api
       dockerfile: Dockerfile
       args:
         - GIT_TOKEN=${GIT_TOKEN}
