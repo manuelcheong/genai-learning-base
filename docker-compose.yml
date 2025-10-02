@@ -1,0 +1,98 @@
+services:
+  
+  agentkit-orchestrator-agent:
+    depends_on:
+      - phoenix
+    build:
+      context: ./kit/containers/container_base_agent
+      dockerfile: Dockerfile
+      args:
+        - GIT_TOKEN=${GIT_TOKEN}
+    ports:
+      - "8085:8080"
+    volumes:
+      - ./agent/agentkit_orchestrator_agent:/app/code/agent
+      - ./mapfre_agentkit:/app/code/mapfre_agentkit
+    env_file:
+      - ./.env
+    environment:
+      - CONFIG_PATH=/app/code/agent/agent_config.yaml
+    
+    command: >
+      sh -c "pip install watchdog && \
+             sleep 5 && \
+             export PYTHONPATH=/app/code:/app/code/agent && \
+             watchmedo auto-restart --directory=/app/code --patterns='*.py;*.yaml;*.yml' --recursive -- python /app/code/agent/__main__.py"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/.well-known/agent-card.json"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - my_network
+
+  api:
+    depends_on:
+      agentkit-orchestrator-agent:
+        condition: service_healthy
+    build:
+      context: app
+      dockerfile: Dockerfile
+      args:
+        - GIT_TOKEN=${GIT_TOKEN}
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./app:/app/code/app
+      - ./kit/mapfre_agentkit:/app/code/mapfre_agentkit
+    env_file:
+      - .env
+    environment:
+      - PHOENIX_HOST=phoenix
+      - PHOENIX_PORT=6006
+    command: >
+      sh -c "pip install watchdog && \
+             sleep 5 && \
+             export PYTHONPATH=/app/code:/app/code/app && \
+             python /app/code/app/app.py"
+    networks:
+      - my_network
+
+  portal:
+    depends_on:
+      agentkit-orchestrator-agent:
+        condition: service_healthy
+    build:
+      context: portal
+      dockerfile: Dockerfile
+     
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./portal:/app/code/app
+    env_file:
+      - .env
+    
+    networks:
+      - my_network
+
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    ports:
+      - "6006:6006"
+    networks:
+      - my_network
+
+  ## Build from here https://github.com/a2aproject/a2a-inspector.git
+#  a2ainspector:
+#    image: a2a-inspector
+#    ports:
+#      - "6007:8080"
+#    networks:
+#      - my_network
+
+networks:
+  my_network:
+    driver: bridge
