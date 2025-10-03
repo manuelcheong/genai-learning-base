@@ -39,7 +39,7 @@ function App() {
         onMobileMenuToggle={handleMobileMenuToggle}
       />
       <main className="pb-8">
-       {/*  <ContextStatus /> */}
+       {/* <ContextStatus /> */}
         {renderActiveSection()}
       </main>
     </div>
