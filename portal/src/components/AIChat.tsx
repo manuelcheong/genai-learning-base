@@ -35,7 +35,7 @@ export default function AIChat() {
 
   const { context, changeScope, addMemoryToScope } = useIaChat();
 
-  console.log('Contexto actual:', context)
+  // console.log('Contexto actual:', context)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -45,15 +45,15 @@ export default function AIChat() {
     scrollToBottom();
   }, [messages]);
 
-  console.log('Contexto actual:')
-  console.log(JSON.stringify(context));
+  console.log('Contexto a enviar:' + context.scope)
+  console.log(JSON.stringify(JSON.stringify(context.memoryByContext[context.scope])));
 
   const requestAgentResponse = async (userMessage: string) => {
     // ADD MESSAGE to MEMORY
       addMemoryToScope(userMessage)
     try {
       const response = await axios.post('http://localhost:8081/agent/messages', { message: `${userMessage} **utiliza esta informacion como historico de la conversarion: ${JSON.stringify(context.memoryByContext[context.scope])}**` });
-      console.log('Respuesta del agente:', response.data);
+      // console.log('Respuesta del agente:', response.data);
       const ia_response_text = response.data.artifacts[0].parts[0].text;
       const aiResponse: Message = {
         id: Date.now() + 1,
