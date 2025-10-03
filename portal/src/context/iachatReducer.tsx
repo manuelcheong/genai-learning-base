@@ -21,7 +21,7 @@ export const ischatReducer = (state, action) => {
     case 'ADD_MEMORY_TO_SCOPE': {
       console.log('ADDING MEMORY TO SCOPE', action.payload);
       const memories = Object.assign(initialState.memoryByContext);
-      memories[state.scope].push(action.payload.memory);
+      if (!memories[state.scope].includes(action.payload.memory)) memories[state.scope].push(action.payload.memory);
 
       return {
         ...state, memoryByContext: memories
