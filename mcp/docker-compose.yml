@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  github-mcp:
+    build: .
+    container_name: github-mcp-server
+    environment:
+      GITHUB_PERSONAL_ACCESS_TOKEN: ${GITHUB_TOKEN}
+      GITHUB_TOOLSETS: "repos,issues,pull_requests,actions,code_security"
+    ports:
+      - "8090:8090"
+    restart: unless-stopped
+

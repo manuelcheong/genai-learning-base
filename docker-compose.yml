@@ -85,6 +85,18 @@ services:
     networks:
       - my_network
 
+  github-mcp-server:
+    image: ghcr.io/github/github-mcp-server
+    container_name: github-mcp-server
+    env_file:
+      - .env
+    ports:
+      - "8090:8090"
+    restart: unless-stopped
+    networks:
+      - my_network
+    
+
   ## Build from here https://github.com/a2aproject/a2a-inspector.git
 #  a2ainspector:
 #    image: a2a-inspector
