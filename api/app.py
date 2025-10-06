@@ -83,8 +83,6 @@ def build_router(gateway: A2AGatewayClient) -> APIRouter:
 
         # CHANGE AGENT CARD URL
 
-        AGENT_CARD_URL = "http://summarizing-agent:8080"
-
         call_context = gateway.build_propagation_context(request)
 
         if stream and gateway.supports_streaming():
@@ -117,74 +115,6 @@ def build_router(gateway: A2AGatewayClient) -> APIRouter:
         return JSONResponse(content=last_payload or {})
 
     return router
-
-#SUMMERIZER 1
-
-    @router.post("/summarize")
-    async def post_message(
-        body: dict = Body(
-            ...,
-            description="{ message: str, contextId?, metadata?}",
-        ),
-        stream: bool = Query(False, description="Enable streaming if supported"),
-        request: Request = None,
-    ):
-        """
-        Endpoint to send a message to an agent and receive a response.
-
-        Supports two modes:
-        1.  **Non-streaming** (default): Returns a single JSON response with the final message.
-        2.  **Streaming** (if `stream=true` and supported by the agent): Returns a
-            `text/event-stream` response (Server-Sent Events) with intermediate
-            events and the final message.
-
-        Args:
-            body (dict): The request body, containing the message to send.
-            stream (bool): A query parameter to enable streaming mode.
-            request (Request): The FastAPI request object.
-
-        Returns:
-            Union[JSONResponse, StreamingResponse]: A JSON response or a streaming SSE response.
-        """
-        text = str(body.get("message", ""))
-        context_id = body.get("contextId")
-        metadata = body.get("metadata") or {}
-
-        call_context = gateway.build_propagation_context(request)
-
-        if stream and gateway.supports_streaming():
-
-            async def event_gen() -> AsyncGenerator[bytes, None]:
-                async for evt in gateway.send_message(
-                    text,
-                    context_id=context_id,
-                    metadata=metadata,
-                    context=call_context,
-                ):
-                    # SSE framing: event + data
-                    event_name = evt.get("event", "message")
-                    payload = evt.get("data", {})
-                    yield f"event: {event_name}\n".encode()
-                    yield f"data: {JSONResponse(content=payload).body.decode()}\n\n".encode()
-
-            return StreamingResponse(event_gen(), media_type="text/event-stream")
-
-        # Non-streaming path
-        last_payload: Optional[dict[str, Any]] = None
-        async for evt in gateway.send_message(
-            text,
-            context_id=context_id,
-            metadata=metadata,
-            context=call_context,
-        ):
-            if evt.get("event") == "message":
-                last_payload = evt.get("data")
-        return JSONResponse(content=last_payload or {})
-
-    return router
-
-
-
 
 # --- Lógica de la aplicación ---
 
