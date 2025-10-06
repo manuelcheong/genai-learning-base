@@ -15,5 +15,8 @@ git subtree pull --prefix=api/ https://github.com/manuelcheong/genai-learning-ap
 echo "--- 🐝 Updating 'agent' subtree..."
 git subtree pull --prefix=agents/ https://github.com/manuelcheong/genai-learning-agent-base.git main --squash
 
+echo "--- 🐝 Updating 'agent' subtree..."
+git subtree pull --prefix=agents/ https://github.com/manuelcheong/genai-learning-summarizing-agent.git  main --squash
+
 
 echo "✅ All subtrees updated successfully!"
