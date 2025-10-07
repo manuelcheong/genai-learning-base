@@ -1,0 +1,5 @@
+# MAPFRE's Agent KIT
+#mapfre_agentkit @ git+https://${GIT_TOKEN}@github.com/mapfre-tech/esp-ateneaes-mapfre-agent-kit@develop
+mapfre_agentkit @ git+https://${GIT_TOKEN}@github.com/mapfre-tech/esp-ateneaes-mapfre-agent-kit@main
+redis>=5.0.0
+pydantic>=2.0.0
