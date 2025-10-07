@@ -1,5 +1,6 @@
 services:
   
+  # -------   AGENTS ---------------
   agentkit-orchestrator-agent:
     depends_on:
       - phoenix
@@ -64,6 +65,41 @@ services:
     networks:
       - my_network
 
+  github-agent:
+    depends_on:
+      - phoenix
+    build:
+      context: ./kit/containers/container_base_agent
+      dockerfile: Dockerfile
+      args:
+        - GIT_TOKEN=${GIT_TOKEN}
+    ports:
+      - "8087:8080"
+    volumes:
+      - ./agents/github-agent:/app/code/agent
+      - ./kit/mapfre_agentkit:/app/code/mapfre_agentkit
+    env_file:
+      - ./.env
+    environment:
+      - CONFIG_PATH=/app/code/agent/agent_config.yaml
+    
+    command: >
+      sh -c "pip install watchdog && \
+             sleep 5 && \
+             export PYTHONPATH=/app/code:/app/code/agent && \
+             watchmedo auto-restart --directory=/app/code --patterns='*.py;*.yaml;*.yml' --recursive -- python /app/code/agent/__main__.py"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/.well-known/agent-card.json"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - my_network
+
+
+# -------   AGENTS ---------------      
+
   api:
     depends_on:
       agentkit-orchestrator-agent:
@@ -117,13 +153,17 @@ services:
     networks:
       - my_network
 
-#  github-mcp-server:
-#    image: ghcr.io/github/github-mcp-server
+  github-mcp-server:
+    image: ghcr.io/github/github-mcp-server
 #    container_name: github-mcp-server
 #    env_file:
 #      - .env
 #    ports:
 #      - "8090:8090"
+    environment:
+      GITHUB_PERSONAL_ACCESS_TOKEN: ${GITHUB_MANU}
+    stdin_open: true 
+    tty: true
 #    restart: unless-stopped
 #    networks:
 #      - my_network

@@ -1,0 +1,5 @@
+fastmcp==2.9.0
+# Observability libraries
+arize-phoenix-otel==0.12.1
+arize-otel>=0.8.2
+openinference-instrumentation-mcp>=1.3.0
