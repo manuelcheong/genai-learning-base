@@ -5,7 +5,7 @@ services:
     depends_on:
       - phoenix
     build:
-      context: ./kit/containers/container_base_agent
+      context: ./kit/containers/container_base_session
       dockerfile: Dockerfile
       args:
         - GIT_TOKEN=${GIT_TOKEN}
