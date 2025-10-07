@@ -153,17 +153,38 @@ services:
     networks:
       - my_network
 
-  github-mcp-server:
-    image: ghcr.io/github/github-mcp-server
+## ------ REDIS TO SESSION HANDLER-------------
+
+  redis:
+    image: redis:alpine
+    container_name: redis_session_store
+    restart: always
+    
+    ports:
+      - "6379:6379"
+
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASS}
+
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
+    driver: local
+## -----------------END REDIS ------------------
+
+
+#  github-mcp-server:
+#    image: ghcr.io/github/github-mcp-server
 #    container_name: github-mcp-server
 #    env_file:
 #      - .env
 #    ports:
 #      - "8090:8090"
-    environment:
-      GITHUB_PERSONAL_ACCESS_TOKEN: ${GITHUB_MANU}
-    stdin_open: true 
-    tty: true
+#    environment:
+#      GITHUB_PERSONAL_ACCESS_TOKEN: ${GITHUB_MANU}
+#    stdin_open: true 
+#    tty: true
 #    restart: unless-stopped
 #    networks:
 #      - my_network
