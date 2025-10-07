@@ -52,8 +52,9 @@ export default function AIChat() {
     // ADD MESSAGE to MEMORY
       addMemoryToScope(userMessage)
     try {
-      const response = await axios.post('http://localhost:8081/agent/messages', { message: `${userMessage} **utiliza esta informacion como historico de la conversarion: ${JSON.stringify(context.memoryByContext[context.scope])}**` });
+      const response = await axios.post('http://localhost:8081/agent/messages', { message: `${userMessage}` });   
       // console.log('Respuesta del agente:', response.data);
+      // **utiliza esta informacion como historico de la conversarion: ${JSON.stringify(context.memoryByContext[context.scope])}**
       const ia_response_text = response.data.artifacts[0].parts[0].text;
       const aiResponse: Message = {
         id: Date.now() + 1,
