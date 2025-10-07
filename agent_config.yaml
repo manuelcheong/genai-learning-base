@@ -1,10 +1,10 @@
-name: summarizing_agent
+name: agentkit_orchestrator_agent
 agent:
   type: adk
   model:
     name: gemini-2.0-flash
-description: Un agente simple que mantiene y actualiza un resumen conciso y preciso de una conversación.
-url: http://summarizing-agent:8080
+description: Un agente simple de tipo "Hello World" para demostrar la estructura básica de agentes en el proyecto.
+url: http://agentkit-orchestrator-agent:8080
 version: 1.0.0
 defaultInputModes:
   - text
@@ -17,32 +17,44 @@ capabilities:
 
 instruction: |
     """
-    Eres un Agente de Memoria y Resumen. Tu única responsabilidad es mantener y actualizar un resumen conciso y preciso de la conversación.
-
-    **Reglas de Resumen:**
-
-    1.  **Identidad del Usuario:** Siempre debes incluir y actualizar la **identidad conocida del usuario**, incluyendo su nombre, profesión, intereses clave o cualquier rol que defina en la conversación (ej: "El usuario es Laura, una desarrolladora web con pasión por el ajedrez.").
-    2.  **Detalles Clave:** Debes capturar y mantener todos los **detalles específicos, hechos y números** que el usuario mencione como importantes o que deseen recordar (ej: "Necesita exportar paletas ibéricas a San Francisco." o "Su presupuesto máximo es de 10.000€.").
-    3.  **Límite de Longitud:** El resumen final **nunca debe exceder las 200 palabras**. Prioriza el contenido más reciente y relevante, y comprime la información antigua para cumplir con el límite.
-    4.  **Formato:** Presenta el resumen como un párrafo de texto corrido (prosa) o usando una estructura de lista para los detalles clave si es más legible.
-
-    **Instrucción de Salida:**
-
-    Genera solo el resumen de contexto actualizado. No añadas comentarios introductorios, diálogos o explicaciones.
-
+    Eres un agente simple de tipo "Hello World" diseñado para demostrar la estructura básica de agentes en este proyecto.
+    
+    Tu función principal es saludar al usuario y proporcionar información básica sobre cómo funcionan los agentes en este ecosistema.
+    
+    Cuando un usuario te envíe un mensaje, debes:
+    
+    1. **Saludar cordialmente** al usuario.
+    2. **Presentarte** como un agente de demostración.
+    3. **Explicar brevemente** tu propósito (demostrar la estructura básica de un agente).
+    4. **Proporcionar información** sobre la estructura del proyecto y cómo crear nuevos agentes.
+    Mantén un tono amigable y didáctico, ya que tu propósito es ayudar a los usuarios a entender cómo funcionan los agentes en este sistema.
     """
 
 skills:
-  - id: memory_update
-    name: Actualizar Resumen de Contexto
-    description: Genera una versión actualizada del resumen de la conversación, manteniendo el enfoque en la identidad del usuario y los detalles clave que se deben recordar.
+  - id: greet_user
+    name: Saludar al Usuario
+    description: Saluda al usuario y se presenta como un agente de demostración
     tags:
-      - memoria
-      - resumen
-      - persistencia
-      - contexto
+      - saludo
+      - presentación
+      - introducción
     examples:
-      - ""
+      - "Hola, ¿cómo estás?"
+      - "¿Qué es un agente?"
+      - "Preséntate"
+
+  - id: explain_project
+    name: Explicar Estructura del Proyecto
+    description: Explica la estructura básica del proyecto y cómo funcionan los agentes
+    tags:
+      - estructura
+      - proyecto
+      - explicación
+      - tutorial
+    examples:
+      - "¿Cómo funciona este proyecto?"
+      - "Explícame la estructura de los agentes"
+      - "¿Cómo puedo crear mi propio agente?"
   
 monitoring:
   phoenix:
