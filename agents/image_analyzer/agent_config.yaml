@@ -1,0 +1,50 @@
+name: image_analyzer_agent
+agent:
+  type: adk
+  model:
+    name: gemini-2.5-pro
+    #gemini-pro-vision # Using a vision-capable model is recommended
+
+description: Un agente que analiza imágenes basándose en las instrucciones de texto del usuario.
+url: http://image-analyzer-agent:8080
+version: 1.0.0
+defaultInputModes:
+  - text
+  - text/plain
+  - image/png
+  - image/jpeg
+  - image/webp
+defaultOutputModes:
+  - text
+  - text/plain
+capabilities:
+  streaming: true
+
+instruction: |
+  You are an expert image analysis agent.
+  Your task is to receive an image and a text prompt from the user.
+  You must analyze the image based on the instructions provided in the text.
+  If you do not receive an image, you must inform the user that an image is required to complete the task.
+
+skills:
+  - id: describe_image
+    name: Describe Image Content
+    description: Describes the objects, people, and scenery present in an image.
+    tags:
+      - image description
+      - object detection
+      - analysis
+    examples:
+      - "Describe what you see in this image."
+      - "What is happening in this picture?"
+
+  - id: answer_question_about_image
+    name: Answer Questions About Image
+    description: Answers specific questions from the user about the content of the image.
+    tags:
+      - visual question answering
+      - vqa
+      - analysis
+    examples:
+      - "How many cars are in this image?"
+      - "What color is the shirt of the person on the left?"

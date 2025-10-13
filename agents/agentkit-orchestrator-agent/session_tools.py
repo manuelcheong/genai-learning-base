@@ -103,6 +103,8 @@ manager = RedisSessionManager(
 
 async def save_session_user(session_id: str, session_data: AgentSession) -> bool:
     
+    print(f"\nGuardando sesión: {session_id}")
+    print(f"Datos de sesión: {session_data}")  
     try:
         await manager.initialize()
 

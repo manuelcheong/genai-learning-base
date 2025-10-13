@@ -11,6 +11,8 @@ from mapfre_agentkit.a2a.interceptors.headers_propagation_interceptor import (
     HeadersPropagationInterceptor,
 )
 
+from a2a.types import TextPart, FilePart, FileWithUri, FileWithBytes
+
 # --- Configuración ---
 # URL donde está corriendo tu agente 'custom_client'
 AGENT_CARD_URL = os.environ.get("AGENT_CARD_URL", "http://agentkit-orchestrator-agent:8080")
@@ -78,6 +80,8 @@ def build_router(gateway: A2AGatewayClient) -> APIRouter:
             Union[JSONResponse, StreamingResponse]: A JSON response or a streaming SSE response.
         """
         text = str(body.get("message", ""))
+        kind = str(body.get("kind", "text"))
+        messageContent = str(body.get("messageContent", ""))
         context_id = body.get("contextId")
         metadata = body.get("metadata") or {}
 

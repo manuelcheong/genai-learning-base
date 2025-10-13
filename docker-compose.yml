@@ -1,7 +1,7 @@
 services:
   
   # -------   AGENTS ---------------
-  agentkit-orchestrator-agent:
+  image-analyzer-agent:
     depends_on:
       - phoenix
     build:
@@ -12,8 +12,8 @@ services:
     ports:
       - "8085:8080"
     volumes:
-      - ./agents/agentkit-orchestrator-agent:/app/code/agent
-      - ./kit/mapfre_agentkit:/app/code/mapfre_agentkit
+      - ./agents/image_analyzer:/app/code/agent
+      #- ./kit/mapfre_agentkit:/app/code/mapfre_agentkit
     env_file:
       - ./.env
     environment:
@@ -33,76 +33,75 @@ services:
     networks:
       - my_network
 
-  summarizing-agent:
-    depends_on:
-      - phoenix
-    build:
-      context: ./kit/containers/container_base_agent
-      dockerfile: Dockerfile
-      args:
-        - GIT_TOKEN=${GIT_TOKEN}
-    ports:
-      - "8086:8080"
-    volumes:
-      - ./agents/summarizing-agent:/app/code/agent
-      - ./kit/mapfre_agentkit:/app/code/mapfre_agentkit
-    env_file:
-      - ./.env
-    environment:
-      - CONFIG_PATH=/app/code/agent/agent_config.yaml
+#  summarizing-agent:
+#    depends_on:
+#      - phoenix
+#    build:
+#      context: ./kit/containers/container_base_agent
+#      dockerfile: Dockerfile
+#      args:
+#        - GIT_TOKEN=${GIT_TOKEN}
+#    ports:
+#      - "8086:8080"
+#    volumes:
+#      - ./agents/summarizing-agent:/app/code/agent
+#      - ./kit/mapfre_agentkit:/app/code/mapfre_agentkit
+#    env_file:
+#      - ./.env
+#    environment:
+#      - CONFIG_PATH=/app/code/agent/agent_config.yaml
     
-    command: >
-      sh -c "pip install watchdog && \
-             sleep 5 && \
-             export PYTHONPATH=/app/code:/app/code/agent && \
-             watchmedo auto-restart --directory=/app/code --patterns='*.py;*.yaml;*.yml' --recursive -- python /app/code/agent/__main__.py"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/.well-known/agent-card.json"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    networks:
-      - my_network
-
-  github-agent:
-    depends_on:
-      - phoenix
-    build:
-      context: ./kit/containers/container_base_agent
-      dockerfile: Dockerfile
-      args:
-        - GIT_TOKEN=${GIT_TOKEN}
-    ports:
-      - "8087:8080"
-    volumes:
-      - ./agents/github-agent:/app/code/agent
-      - ./kit/mapfre_agentkit:/app/code/mapfre_agentkit
-    env_file:
-      - ./.env
-    environment:
-      - CONFIG_PATH=/app/code/agent/agent_config.yaml
+#  command: >
+#    sh -c "pip install watchdog && \
+#           sleep 5 && \
+#           export PYTHONPATH=/app/code:/app/code/agent && \
+#           watchmedo auto-restart --directory=/app/code --patterns='*.py;*.yaml;*.yml' --recursive -- python /app/code/agent/__main__.py"
+#  healthcheck:
+#    test: ["CMD", "curl", "-f", "http://localhost:8080/.well-known/agent-card.json"]
+#    interval: 10s
+#    timeout: 5s
+#    retries: 5
+#    start_period: 30s
+#  networks:
+#    - my_network
+# #github-agent:
+#    depends_on:
+#      - phoenix
+#    build:
+#      context: ./kit/containers/container_base_agent
+#      dockerfile: Dockerfile
+#      args:
+#        - GIT_TOKEN=${GIT_TOKEN}
+#    ports:
+#      - "8087:8080"
+#    volumes:
+#      - ./agents/github-agent:/app/code/agent
+#      - ./kit/mapfre_agentkit:/app/code/mapfre_agentkit
+#    env_file:
+#      - ./.env
+#    environment:
+#      - CONFIG_PATH=/app/code/agent/agent_config.yaml
     
-    command: >
-      sh -c "pip install watchdog && \
-             sleep 5 && \
-             export PYTHONPATH=/app/code:/app/code/agent && \
-             watchmedo auto-restart --directory=/app/code --patterns='*.py;*.yaml;*.yml' --recursive -- python /app/code/agent/__main__.py"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/.well-known/agent-card.json"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    networks:
-      - my_network
-
-
+#    command: >
+#      sh -c "pip install watchdog && \
+#             sleep 5 && \
+#             export PYTHONPATH=/app/code:/app/code/agent && \
+#             watchmedo auto-restart --directory=/app/code --patterns='*.py;*.yaml;*.yml' --recursive -- python /app/code/agent/__main__.py"
+#    healthcheck:
+#      test: ["CMD", "curl", "-f", "http://localhost:8080/.well-known/agent-card.json"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#      start_period: 30s
+#    networks:
+#      - my_network
+#
+#
 # -------   AGENTS ---------------      
 
   api:
     depends_on:
-      agentkit-orchestrator-agent:
+      image-analyzer-agent:
         condition: service_healthy
     build:
       context: api
@@ -113,7 +112,7 @@ services:
       - "8081:8080"
     volumes:
       - ./api:/app/code/app
-      - ./kit/mapfre_agentkit:/app/code/mapfre_agentkit
+      #- ./kit/mapfre_agentkit:/app/code/mapfre_agentkit
     env_file:
       - .env
     environment:
@@ -127,23 +126,23 @@ services:
     networks:
       - my_network
 
-  portal:
-    depends_on:
-      agentkit-orchestrator-agent:
-        condition: service_healthy
-    build:
-      context: portal
-      dockerfile: Dockerfile
+#  portal:
+#    depends_on:
+#      agentkit-orchestrator-agent:
+#        condition: service_healthy
+#    build:
+#      context: portal
+#      dockerfile: Dockerfile
      
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./portal:/app/code/app
-    env_file:
-      - .env
+#    ports:
+#      - "5173:5173"
+#    volumes:
+#      - ./portal:/app/code/app
+#    env_file:
+#      - .env
     
-    networks:
-      - my_network
+#    networks:
+#      - my_network
 
 
   phoenix:
@@ -155,22 +154,22 @@ services:
 
 ## ------ REDIS TO SESSION HANDLER-------------
 
-  redis:
-    image: redis:alpine
-    container_name: redis_session_store
-    restart: always
+#  redis:
+#    image: redis:alpine
+#    container_name: redis_session_store
+#    restart: always
     
-    ports:
-      - "6379:6379"
+#    ports:
+#      - "6379:6379"
 
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASS}
+#    command: redis-server --appendonly yes --requirepass ${REDIS_PASS}
 
-    volumes:
-      - redis_data:/data
+#    volumes:
+#      - redis_data:/data
 
-volumes:
-  redis_data:
-    driver: local
+#volumes:
+#  redis_data:
+#    driver: local
 ## -----------------END REDIS ------------------
 
 
@@ -191,12 +190,12 @@ volumes:
     
 
   ## Build from here https://github.com/a2aproject/a2a-inspector.git
-#  a2ainspector:
-#    image: a2a-inspector
-#    ports:
-#      - "6007:8080"
-#    networks:
-#      - my_network
+  a2ainspector:
+    image: a2a-inspector
+    ports:
+      - "6007:8080"
+    networks:
+      - my_network
 
 networks:
   my_network:

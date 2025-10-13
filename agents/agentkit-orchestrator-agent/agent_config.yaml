@@ -28,6 +28,12 @@ instruction: |
     3. **Explicar brevemente** tu propósito (demostrar la estructura básica de un agente).
     4. **Proporcionar información** sobre la estructura del proyecto y cómo crear nuevos agentes.
     Mantén un tono amigable y didáctico, ya que tu propósito es ayudar a los usuarios a entender cómo funcionan los agentes en este sistema.
+
+
+    Uso de herramientas para el manejo de contexto:
+
+    Debes utilizar la herramienta save_session_user y enviarle el valor del contextid y el texto como parametros para guardar el historico.
+    Antes de dar una respuesta debes obtener el historico de la conversacion utilizando la herramienta load_session_user y enviandole el contextid
     """
 
 skills:
@@ -56,17 +62,7 @@ skills:
       - "Explícame la estructura de los agentes"
       - "¿Cómo puedo crear mi propio agente?"
 
-tools:
-  - type: function
-    name: save_session_user
-    description: Save user session in Redis
-    module_path: session_tools
-    function_name: save_session_user
-  - type: function
-    name: load_session_user
-    description: Get historic user session from Redis
-    module_path: session_tools
-    function_name: load_session_user
+
   
 
 monitoring:
