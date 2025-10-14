@@ -5,7 +5,7 @@ services:
     depends_on:
       - phoenix
     build:
-      context: ./kit/containers/container_base_session
+      context: ./kit/containers/container_base_agent
       dockerfile: Dockerfile
       args:
         - GIT_TOKEN=${GIT_TOKEN}
@@ -13,6 +13,38 @@ services:
       - "8085:8080"
     volumes:
       - ./agents/image_analyzer:/app/code/agent
+      #- ./kit/mapfre_agentkit:/app/code/mapfre_agentkit
+    env_file:
+      - ./.env
+    environment:
+      - CONFIG_PATH=/app/code/agent/agent_config.yaml
+    
+    command: >
+      sh -c "pip install watchdog && \
+             sleep 5 && \
+             export PYTHONPATH=/app/code:/app/code/agent && \
+             watchmedo auto-restart --directory=/app/code --patterns='*.py;*.yaml;*.yml' --recursive -- python /app/code/agent/__main__.py"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/.well-known/agent-card.json"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - my_network
+
+  audio-analyzer-agent:
+    depends_on:
+      - phoenix
+    build:
+      context: ./kit/containers/container_base_agent
+      dockerfile: Dockerfile
+      args:
+        - GIT_TOKEN=${GIT_TOKEN}
+    ports:
+      - "8086:8080"
+    volumes:
+      - ./agents/audio_analyzersource:/app/code/agent
       #- ./kit/mapfre_agentkit:/app/code/mapfre_agentkit
     env_file:
       - ./.env
@@ -118,11 +150,28 @@ services:
     environment:
       - PHOENIX_HOST=phoenix
       - PHOENIX_PORT=6006
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
     command: >
       sh -c "pip install watchdog && \
              sleep 5 && \
              export PYTHONPATH=/app/code:/app/code/app && \
              python /app/code/app/app.py"
+    networks:
+      - my_network
+
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
     networks:
       - my_network
 
@@ -143,6 +192,8 @@ services:
     
 #    networks:
 #      - my_network
+
+
 
 
   phoenix:
@@ -200,3 +251,7 @@ services:
 networks:
   my_network:
     driver: bridge
+
+volumes:
+  minio-data:
+    driver: local

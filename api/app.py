@@ -12,10 +12,14 @@ from mapfre_agentkit.a2a.interceptors.headers_propagation_interceptor import (
 )
 
 from a2a.types import TextPart, FilePart, FileWithUri, FileWithBytes
+from minio import Minio
+
+
+#from models import ApiBaseConfig, BodyConfig, KindType
 
 # --- Configuración ---
 # URL donde está corriendo tu agente 'custom_client'
-AGENT_CARD_URL = os.environ.get("AGENT_CARD_URL", "http://agentkit-orchestrator-agent:8080")
+AGENT_CARD_URL = os.environ.get("AGENT_CARD_URL", "http://audio-analyzer-agent:8080")
 
 # Variable para almacenar el cliente del gateway
 gateway_client_instance = None
@@ -25,7 +29,7 @@ gateway_client_instance = None
 # ----------------------------------------------------------------------------
 
 
-def build_router(gateway: A2AGatewayClient) -> APIRouter:
+def build_router(gateway: A2AGatewayClient, minio: Minio) -> APIRouter:
     """
     Builds a FastAPI APIRouter to expose the A2AGatewayClient via an HTTP API.
 
@@ -79,21 +83,34 @@ def build_router(gateway: A2AGatewayClient) -> APIRouter:
         Returns:
             Union[JSONResponse, StreamingResponse]: A JSON response or a streaming SSE response.
         """
-        text = str(body.get("message", ""))
+        text = str(body.get("messages", ""))
         kind = str(body.get("kind", "text"))
-        messageContent = str(body.get("messageContent", ""))
+        attachment = body.get("attachment", "")
         context_id = body.get("contextId")
         metadata = body.get("metadata") or {}
+        
+
+        content = []
+        if text:
+            content.append(TextPart(text=text))
+        if attachment:
+            mime_type = attachment.split(':')[1].split(';')[0]
+            attachment_bytes = attachment.split(',')[1]
+            #minio.put_object("media", attachment_bytes, len(attachment_bytes), mime_type)
+            content.append(FilePart(file=FileWithBytes(bytes=attachment_bytes, mime_type=mime_type )))
+
 
         # CHANGE AGENT CARD URL
 
         call_context = gateway.build_propagation_context(request)
 
+        
+
         if stream and gateway.supports_streaming():
 
             async def event_gen() -> AsyncGenerator[bytes, None]:
                 async for evt in gateway.send_message(
-                    text,
+                    content=content,
                     context_id=context_id,
                     metadata=metadata,
                     context=call_context,
@@ -109,7 +126,7 @@ def build_router(gateway: A2AGatewayClient) -> APIRouter:
         # Non-streaming path
         last_payload: Optional[dict[str, Any]] = None
         async for evt in gateway.send_message(
-            text,
+            content=content,
             context_id=context_id,
             metadata=metadata,
             context=call_context,
@@ -140,8 +157,14 @@ async def lifespan(app: FastAPI):
 
     print("Gateway client created successfully.")
 
+    #client = Minio("localhost:9000", "minioadmin", "minioadmin123", secure=False)
+    # Auto-crear bucket
+    #if not client.bucket_exists("media"):
+    #    client.make_bucket("media")
+
+
     # Construye el router y lo añade a la aplicación
-    api_router = build_router(gateway_client_instance)
+    api_router = build_router(gateway_client_instance, None)
     app.include_router(api_router, prefix="/agent")
     print("Agent API router included.")
 

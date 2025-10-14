@@ -1,0 +1,43 @@
+services:
+  audio-analyzer-agent:
+    depends_on:
+      - phoenix
+    build:
+      context: ./../../containers/container_base_agent
+      dockerfile: Dockerfile
+      args:
+        - GIT_TOKEN=${GIT_TOKEN}
+    ports:
+      - "8083:8080"
+    volumes:
+      - ./:/app/code/agent
+    env_file:
+      - .env
+    environment:
+      - PHOENIX_HOST=phoenix
+      - PHOENIX_PORT=6006
+      - CONFIG_PATH=/app/code/agent/agent_config.yaml
+    command: >
+      sh -c "pip install watchdog && \
+             export PYTHONPATH=/app/code:/app/code/agent && \
+             watchmedo auto-restart --directory=/app/code --patterns='*.py;*.yaml;*.yml' --recursive -- python /app/code/agent/__main__.py"
+    networks:
+      - my_network
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    ports:
+      - "6006:6006"
+    networks:
+      - my_network
+
+  a2ainspector:
+    image: a2a-inspector
+    ports:
+      - "6007:8080"
+    networks:
+      - my_network
+
+networks:
+  my_network:
+    driver: bridge

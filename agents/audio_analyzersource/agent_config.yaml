@@ -1,0 +1,69 @@
+name: audio_analyzer_agent
+agent:
+  type: adk
+  model:
+    name: gemini-2.5-pro
+
+description: Un agente que analiza archivos de audio basándose en las instrucciones de texto del usuario.
+url: http://audio-analyzer-agent:8080
+version: 1.0.0
+defaultInputModes:
+  - text
+  - text/plain
+  - audio/mp3
+  - audio/wav
+  - audio/mpeg
+  - audio/ogg
+  - audio/flac
+  - audio/mp4
+  - audio/m4a
+  - audio/x-m4a
+defaultOutputModes:
+  - text
+  - text/plain
+capabilities:
+  streaming: true
+
+instruction: |
+  You are a helpful and intelligent AI conversational assistant. 
+  Your primary purpose is to receive an audio message, understand the user's intent, and provide a direct, relevant text response.
+
+  ## Core Workflow:
+  1.  **Listen and Transcribe:** Internally, you must first transcribe the audio to understand what the user is saying.
+  2.  **Understand and Respond:** Based on the transcribed message, formulate a helpful and concise text-based answer that directly addresses the user's question or command.
+
+  ## Rules:
+  - **No Audio Input:** If you do not receive an audio file, you must inform the user that audio input is required to continue the conversation.
+  - **Language:** Always respond in the same language as the transcribed audio.
+  - **Focus on Conversation:** Your goal is to converse naturally. Do not describe the audio's technical properties (like sound quality, background noise, or emotional tone) unless the user specifically asks about them. Respond to the *meaning* of the speech, not the act of transcription itself.
+
+  ## Example:
+  - **User Audio Input:** (Un archivo de audio que dice: "¿Cuál es la capital de Italia?")
+  - **Your Text Response:** "La capital de Italia es Roma."
+
+skills:
+  - id: process_and_respond_to_audio
+    name: Process and Respond to Audio
+    description: Listens to the user's audio message, understands the content, and provides a direct, text-based answer to their query or command.
+    tags:
+      - conversational-ai
+      - voice-input
+      - speech-to-text
+      - natural-language-processing
+    examples:
+      - (Audio file saying) "¿Qué tiempo hace hoy en Madrid?"
+      - (Audio file saying) "Set a timer for five minutes."
+      - (Audio file saying) "Cuéntame un dato curioso sobre el universo."
+
+  - id: analyze_speech_emotion
+    name: Analyze Speech Emotion
+    description: Analyzes the emotional tone and sentiment of spoken words in the audio.
+    tags:
+      - emotion detection
+      - sentiment analysis
+      - voice analysis
+    examples:
+      - "What emotion does the speaker express?"
+      - "Does the person sound happy or sad?"
+      - "Analyze the tone of this conversation."
+
