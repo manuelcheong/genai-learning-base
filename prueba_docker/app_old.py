@@ -13,8 +13,7 @@ from mapfre_agentkit.a2a.interceptors.headers_propagation_interceptor import (
 )
 
 from a2a.types import TextPart, FilePart, FileWithUri, FileWithBytes
-import yaml
-from typing import List, Dict
+import docker
 
 # --- Configuración ---
 # URL por defecto del agente (se puede sobrescribir)
@@ -135,64 +134,30 @@ def build_router(manager: AgentClientManager) -> APIRouter:
         return {"agents": manager.list_agents(), "count": len(manager.list_agents())}
 
     @router.get("/discover")
-    async def discover_agents(
-        compose_file: str = '/app/docker-compose.yml',
-        label_key: str = 'agent.owner',
-        label_value: str = 'mak'
-    ) -> List[Dict]:
+    async def discover_agents() -> dict[str, Any]:
         """
-        Lee docker-compose.yml y extrae servicios marcados con un label específico.
-        
-        Args:
-            compose_file: Ruta al docker-compose.yml
-            label_key: Clave del label a buscar (ej: 'app.type')
-            label_value: Valor del label (ej: 'agent')
-        
+        Lista los agentes que se estan ejecutando en Docker con los siguientes Labels.
+
+        - "agent.owner=mak"
+        - "agent.name=Agent Name"
+        - "agent.card_url=http://image-analyzer-agent:8080"
+        - "agent.discovery.enabled=true"
+
         Returns:
-            Lista de diccionarios con información de cada agente descubierto
+            dict[str, Any]: Diccionario con la lista de agentes.
         """
-        try:
-            with open(compose_file, 'r') as f:
-                compose_data = yaml.safe_load(f)
-            
-            services = compose_data.get('services', {})
-            discovered_agents = []
-            
-            for service_name, service_config in services.items():
-                labels = service_config.get('labels', {})
-                
-                # Manejar tanto formato lista como diccionario
-                label_dict = {}
-                if isinstance(labels, list):
-                    # Formato: ['app.type=agent', 'app.agent.name=hello']
-                    for label in labels:
-                        if '=' in label:
-                            key, val = label.split('=', 1)
-                            label_dict[key] = val
-                elif isinstance(labels, dict):
-                    # Formato: {'app.type': 'agent', 'app.agent.name': 'hello'}
-                    label_dict = labels
-                
-                # Filtrar por label
-                if label_dict.get(label_key) == label_value:
-                    agent_info = {
-                        'service_name': service_name,
-                        'internal_url': f'http://{service_name}:{label_dict.get("app.agent.port", "8080")}',
-                        'agent_name': label_dict.get('app.agent.name', service_name),
-                        'port': label_dict.get('app.agent.port', '8080'),
-                        'labels': label_dict
-                    }
-                    discovered_agents.append(agent_info)
-                    print(f"✅ Discovered agent: {service_name} ({agent_info['agent_name']})")
-            
-            return discovered_agents
-        
-        except FileNotFoundError:
-            print(f"❌ docker-compose.yml not found at {compose_file}")
-            return []
-        except Exception as e:
-            print(f"❌ Error parsing docker-compose.yml: {e}")
-            return []
+        print("Discovering agents...")
+        print(f"DOCKER_HOST env var: {os.getenv('DOCKER_HOST')}")
+        print(f"All DOCKER env vars: {[k for k in os.environ.keys() if 'DOCKER' in k]}")
+        #client = docker.from_env()
+        client = docker.DockerClient(base_url='unix://var/run/docker.sock')
+        print("After client...")
+        #client = docker.DockerClient(base_url='unix://var/run/docker.sock')
+        containers = client.containers.list(filters={"label": "agent.owner=mak"})
+
+        print(f"Containers: {containers}")
+
+        return {"agents": containers}
 
     @router.post("/agents/connect")
     async def connect_agent(
@@ -301,7 +266,7 @@ def build_router(manager: AgentClientManager) -> APIRouter:
         text = str(body.get("messages", ""))
         kind = str(body.get("kind", "text"))
         attachment = body.get("attachment", "")
-        context_id = body.get("context_id")
+        context_id = body.get("contextId")
         metadata = body.get("metadata") or {}
 
         content = []
@@ -315,10 +280,8 @@ def build_router(manager: AgentClientManager) -> APIRouter:
         # Agregar información del agente al metadata
         metadata["agent_url"] = target_agent_url
 
-        #headers = dict(request.headers)
-        headers = {"x-mapfre-session-id": "pruebaaaaa"}
+        headers = dict(request.headers)
         call_context = gateway.build_propagation_context(headers)
-        print(f"Context: {call_context}")
 
         if stream and gateway.supports_streaming():
 
@@ -436,8 +399,6 @@ async def websocket_message_endpoint(websocket: WebSocket):
       devuelve las respuestas del agente a través del WebSocket.
     """
     await websocket.accept()
-    #print("WebSocket connection accepted.")
-    #print(f"Client connected from {websocket.client}")
     # Crea un gestor de clientes específico para esta sesión de WebSocket.
     ws_agent_manager = AgentClientManager()
     print("WebSocket connection accepted. A new agent manager has been created for this session.")
@@ -446,8 +407,6 @@ async def websocket_message_endpoint(websocket: WebSocket):
         while True:
             # Espera a recibir un mensaje JSON del cliente (frontend)
             data = await websocket.receive_json()
-
-            print(f"Received message from client: {data}")
             
             # Extrae los datos necesarios del mensaje
             target_agent_url = data.get("agent_url", DEFAULT_AGENT_CARD_URL)
@@ -457,12 +416,10 @@ async def websocket_message_endpoint(websocket: WebSocket):
             
             text = str(data.get("messages", ""))
             attachment = data.get("attachment", "")
-            context_id = data.get("context_id")
+            context_id = data.get("contextId")
             metadata = data.get("metadata", {})
-            kind = str(data.get("kind", "text"))
-
             
-            #print(f"WS message received for agent: {data}")
+            print(f"WS message received for agent: {target_agent_url}")
 
             try:
                 # Obtiene o crea un cliente A2A para el agente solicitado
@@ -477,16 +434,12 @@ async def websocket_message_endpoint(websocket: WebSocket):
                     attachment_bytes = attachment.split(',')[1]
                     content.append(FilePart(file=FileWithBytes(bytes=attachment_bytes, mime_type=mime_type)))
 
-                headers = {"x-mapfre-session-id": context_id}
-                call_context = gateway.build_propagation_context(headers)
-                print(f"Context: {call_context}")
-
                 # Envía el mensaje al agente y retransmite cada evento de vuelta al cliente WS
                 async for evt in gateway.send_message(
                     content=content,
                     context_id=context_id,
                     metadata=metadata,
-                    context=call_context,  # No hay headers HTTP para propagar en WS
+                    context=None,  # No hay headers HTTP para propagar en WS
                 ):
                     await websocket.send_json(evt)
 

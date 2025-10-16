@@ -2,7 +2,7 @@ name: audio_analyzer_agent
 agent:
   type: adk
   model:
-    name: gemini-2.5-pro
+    name: gemini-2.0-flash
 
 description: Un agente que analiza archivos de audio basándose en las instrucciones de texto del usuario.
 url: http://audio-analyzer-agent:8080

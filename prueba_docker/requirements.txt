@@ -1,0 +1,3 @@
+#mapfre_agentkit @ git+https://${GIT_TOKEN}@github.com/mapfre-tech/esp-ateneaes-mapfre-agent-kit@feature/multimodal
+pyyaml>=6.0
+

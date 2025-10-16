@@ -18,7 +18,12 @@ services:
       - ./.env
     environment:
       - CONFIG_PATH=/app/code/agent/agent_config.yaml
-    
+    labels:
+      - "agent.owner=mak"
+      - "agent.name=Image Analyzer"
+      - "agent.card_url=http://image-analyzer-agent:8080"
+      - "agent.discovery.enabled=true"
+      - "agent.skill=image"
     command: >
       sh -c "pip install watchdog && \
              sleep 5 && \
@@ -50,7 +55,12 @@ services:
       - ./.env
     environment:
       - CONFIG_PATH=/app/code/agent/agent_config.yaml
-    
+    labels:
+      - "agent.owner=mak"
+      - "agent.name=Audio Analyzer"
+      - "agent.card_url=http://audio-analyzer-agent:8080"
+      - "agent.discovery.enabled=true"
+      - "agent.skill=audio"
     command: >
       sh -c "pip install watchdog && \
              sleep 5 && \
@@ -144,7 +154,7 @@ services:
       - "8081:8080"
     volumes:
       - ./api:/app/code/app
-      #- ./kit/mapfre_agentkit:/app/code/mapfre_agentkit
+      - ./docker-compose.yml:/app/docker-compose.yml:ro
     env_file:
       - .env
     environment:
@@ -241,12 +251,12 @@ services:
     
 
   ## Build from here https://github.com/a2aproject/a2a-inspector.git
-  a2ainspector:
-    image: a2a-inspector
-    ports:
-      - "6007:8080"
-    networks:
-      - my_network
+#  a2ainspector:
+#    image: a2a-inspector
+#    ports:
+#      - "6007:8080"
+#    networks:
+#      - my_network
 
 networks:
   my_network:

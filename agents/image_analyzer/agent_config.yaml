@@ -2,7 +2,7 @@ name: image_analyzer_agent
 agent:
   type: adk
   model:
-    name: gemini-2.5-pro
+    name: gemini-2.0-flash
     #gemini-pro-vision # Using a vision-capable model is recommended
 
 description: Un agente que analiza imágenes basándose en las instrucciones de texto del usuario.
@@ -21,30 +21,108 @@ capabilities:
   streaming: true
 
 instruction: |
-  You are an expert image analysis agent.
-  Your task is to receive an image and a text prompt from the user.
-  You must analyze the image based on the instructions provided in the text.
-  If you do not receive an image, you must inform the user that an image is required to complete the task.
+  You are an expert image analysis agent specialized in conversational visual understanding.
+  
+  Your capabilities:
+  - Analyze images in detail based on user questions
+  - Maintain a natural conversation about the images provided
+  - Answer multiple questions about the same image across different turns
+  - Remember previous questions and answers in the conversation to provide contextual responses
+  - Provide detailed, accurate descriptions of visual content
+  
+  Conversation flow:
+  1. When a user first sends an image, acknowledge it and offer to help analyze it
+  2. Answer each question about the image thoroughly and accurately
+  3. If the user asks follow-up questions, reference previous answers when relevant
+  4. If no image has been provided yet, politely ask the user to share an image first
+  5. If discussing a previous image, maintain context about what was already discussed
+  
+  Always be helpful, conversational, and provide rich visual details in your responses.
+  Respond in the same language as the user's messages.
 
 skills:
-  - id: describe_image
+  - id: conversational_image_analysis
+    name: Conversational Image Analysis
+    description: Engages in multi-turn conversations about images, maintaining context across questions and providing detailed visual analysis.
+    tags:
+      - conversational AI
+      - multi-turn dialogue
+      - context awareness
+      - image analysis
+    examples:
+      - "Let me share an image and ask you some questions about it."
+      - "Can you help me understand what's in this photo?"
+      - "I have some questions about this image."
+
+  - id: describe_image_content
     name: Describe Image Content
-    description: Describes the objects, people, and scenery present in an image.
+    description: Provides comprehensive descriptions of objects, people, scenes, colors, composition, and visual elements in images.
     tags:
       - image description
       - object detection
-      - analysis
+      - scene understanding
+      - visual description
     examples:
       - "Describe what you see in this image."
       - "What is happening in this picture?"
+      - "Give me a detailed description of this photo."
+      - "What are the main elements in this image?"
 
-  - id: answer_question_about_image
-    name: Answer Questions About Image
-    description: Answers specific questions from the user about the content of the image.
+  - id: answer_visual_questions
+    name: Answer Visual Questions
+    description: Answers specific questions about image content including counting, identifying, locating, and describing visual elements.
     tags:
       - visual question answering
       - vqa
-      - analysis
+      - object counting
+      - detail identification
     examples:
       - "How many cars are in this image?"
       - "What color is the shirt of the person on the left?"
+      - "Is there a dog in this picture?"
+      - "Where is the building located in the image?"
+
+  - id: contextual_follow_up
+    name: Contextual Follow-up Analysis
+    description: Provides follow-up answers that reference previous questions and responses, maintaining conversation continuity.
+    tags:
+      - context maintenance
+      - follow-up questions
+      - conversational continuity
+    examples:
+      - "And what about the background?"
+      - "Can you tell me more about that?"
+      - "What else can you see there?"
+      - "How does that compare to what you mentioned before?"
+
+  - id: comparative_analysis
+    name: Comparative Visual Analysis
+    description: Compares different elements within an image or relates information across conversation turns.
+    tags:
+      - comparison
+      - visual analysis
+      - relationship detection
+    examples:
+      - "Which person is taller?"
+      - "What's the difference between the two buildings?"
+      - "Compare the colors on the left and right sides."
+      - "How do these objects relate to each other?"
+
+  - id: detailed_inspection
+    name: Detailed Visual Inspection
+    description: Examines specific regions or details in images based on user requests.
+    tags:
+      - detail analysis
+      - region inspection
+      - fine-grained analysis
+    examples:
+      - "Look at the top right corner, what do you see?"
+      - "Can you examine the text on that sign?"
+      - "What details can you see on their faces?"
+      - "Focus on the foreground, what's there?"
+
+monitoring:
+  phoenix:
+    host: phoenix
+    port: 6006
+    project_name: IMAGE_ANALYZER
