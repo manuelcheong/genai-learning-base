@@ -53,10 +53,10 @@ def main():
             http_handler=request_handler,
         )
         app = server.build()
-        app.add_middleware(
+        """ app.add_middleware(
             ObservabilityMiddleware,
             public_paths=["/.well-known/agent.json", "/.well-known/agent-card.json"],
-        )
+        ) """
 
         # StarletteInstrumentor().instrument_app(app)
 

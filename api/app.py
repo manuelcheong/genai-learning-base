@@ -16,6 +16,17 @@ from a2a.types import TextPart, FilePart, FileWithUri, FileWithBytes
 import yaml
 from typing import List, Dict
 
+import uuid
+import mimetypes
+from minio import Minio
+from minio.error import S3Error
+import base64
+import io
+import json
+#from datetime import timedelta
+import time
+from google import genai
+
 # --- Configuración ---
 # URL por defecto del agente (se puede sobrescribir)
 DEFAULT_AGENT_CARD_URL = os.environ.get("AGENT_CARD_URL", "http://image-analyzer-agent:8080")
@@ -99,6 +110,142 @@ class AgentClientManager:
 
 # Variable global para el gestor de clientes
 agent_manager: Optional[AgentClientManager] = None
+
+# ----------------------------------------------------------------------------
+# MinioUploader
+# ----------------------------------------------------------------------------
+
+class MinioUploader:
+    """
+    Gestiona la conexión y subida de archivos a un bucket de MinIO.
+    """
+    def __init__(self):
+        endpoint = os.getenv("MINIO_ENDPOINT")
+        access_key = os.getenv("MINIO_ACCESS_KEY")
+        secret_key = os.getenv("MINIO_SECRET_KEY")
+        secure = False #os.getenv("MINIO_USE_SECURE", "False").lower() == "true"
+
+        if not all([endpoint, access_key, secret_key]):
+            raise ValueError("Las variables de entorno de MinIO no están configuradas.")
+
+        try:
+            self.client = Minio(
+                endpoint,
+                access_key=access_key,
+                secret_key=secret_key,
+                secure=secure
+            )
+            print("✅ Conectado a MinIO exitosamente.")
+        except Exception as e:
+            print(f"❌ Error al conectar con MinIO: {e}")
+            raise
+
+        self.bucket_name = os.getenv("MINIO_BUCKET_NAME", "media1")
+        self._ensure_bucket_exists()
+
+    def _ensure_bucket_exists(self):
+        """Asegura que el bucket exista, si no, lo crea."""
+        bucket_policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Action": "s3:GetObject",
+                    "Resource": f"arn:aws:s3:::{self.bucket_name}/*"
+                }
+            ]
+        }
+        
+        try:
+            found = self.client.bucket_exists(self.bucket_name)
+            if not found:
+                self.client.make_bucket(self.bucket_name)
+                self.client.set_bucket_policy(self.bucket_name, json.dumps(bucket_policy))
+                print(f"Bucket '{self.bucket_name}' creado.")
+            else:
+                print(f"Bucket '{self.bucket_name}' ya existe.")
+        except S3Error as e:
+            print(f"❌ Error al verificar/crear el bucket: {e}")
+            raise
+
+    def upload_file(self, file_bytes: bytes, mime_type: str) -> str:
+        """
+        Sube un archivo en bytes a MinIO y retorna su URL pública.
+
+        Args:
+            file_bytes (bytes): El contenido del archivo.
+            mime_type (str): El tipo MIME del archivo (ej: 'image/jpeg').
+
+        Returns:
+            str: La URL pública del archivo subido.
+        """
+        try:
+            # Generar un nombre de objeto único para evitar colisiones
+            extension = mimetypes.guess_extension(mime_type) or ''
+            object_name = f"{uuid.uuid4()}{extension}"
+
+            # Subir el objeto
+            self.client.put_object(
+                self.bucket_name,
+                object_name,
+                io.BytesIO(file_bytes),
+                length=len(file_bytes),
+                content_type=mime_type
+            )
+            print(f"✅ Archivo subido exitosamente a MinIO:")
+            # Construir la URL pública
+            file_url = (
+                f"http://"
+                f"minio:9000/"
+                f"{self.bucket_name}/{object_name}"
+            )
+            
+            print(f"🚀 Archivo subido exitosamente a: {file_url}")
+            return file_url
+
+        except S3Error as e:
+            print(f"❌ Error al subir el archivo a MinIO: {e}")
+            raise HTTPException(status_code=500, detail="Error al subir el archivo.")
+
+
+
+# -----------------
+    # Upload content
+# -----------------
+
+client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+
+
+def upload_file_google_file_api(data_file, mime_type):
+    """Sube el video a Google File API y luego lo envía al agente."""
+
+    print(f"📤 Subiendo video a Google File API")
+
+    # Subir el archivo a Google
+    try:
+        uploaded_file = client.files.upload(file=data_file, config={"mime_type": mime_type})
+    except Exception as e:
+        print(f"❌ Error al subir el archivo a Google: {e}")
+        raise HTTPException(status_code=500, detail="Error al subir el archivo.")
+
+
+    print(f"✅ Video subido: {uploaded_file.name}")
+    print(f"   URI: {uploaded_file.uri}")
+
+    # Esperar a que el archivo esté ACTIVE
+    print(f"⏳ Esperando a que el archivo esté listo...")
+    while uploaded_file.state.name != "ACTIVE":
+        time.sleep(2)
+        uploaded_file = client.files.get(name=uploaded_file.name)
+        print(f"   Estado: {uploaded_file.state.name}")
+    print(f"✅ Archivo listo para usar")
+
+    print(f"✅ Completado")
+
+    return uploaded_file.uri
+
+
 
 # ----------------------------------------------------------------------------
 # FastAPI router factory to expose the gateway as API endpoints
@@ -367,6 +514,14 @@ async def lifespan(app: FastAPI):
 
     agent_manager = AgentClientManager()
 
+    # Inicializa el uploader de MinIO y lo adjunta al estado de la app
+    try:
+        app.state.minio_uploader = MinioUploader()
+    except Exception as e:
+        print(f"FATAL: No se pudo inicializar MinIO Uploader. La subida de archivos no funcionará. Error: {e}")
+        app.state.minio_uploader = None # Asegura que el atributo exista aunque sea nulo
+    
+
     # Conectar opcionalmente al agente por defecto si está configurado
     if DEFAULT_AGENT_CARD_URL:
         try:
@@ -442,12 +597,18 @@ async def websocket_message_endpoint(websocket: WebSocket):
     ws_agent_manager = AgentClientManager()
     print("WebSocket connection accepted. A new agent manager has been created for this session.")
 
+    # Accede al uploader de MinIO desde el estado de la aplicación
+    minio_uploader: MinioUploader = websocket.app.state.minio_uploader
+    print(f"MinIO Uploader: {minio_uploader}")
+    if not minio_uploader:
+        print("WARNING: MinIO Uploader no está disponible. La subida de archivos fallará.")
+
     try:
         while True:
             # Espera a recibir un mensaje JSON del cliente (frontend)
             data = await websocket.receive_json()
 
-            print(f"Received message from client: {data}")
+            #print(f"Received message from client: {data}")
             
             # Extrae los datos necesarios del mensaje
             target_agent_url = data.get("agent_url", DEFAULT_AGENT_CARD_URL)
@@ -473,13 +634,45 @@ async def websocket_message_endpoint(websocket: WebSocket):
                 if text:
                     content.append(TextPart(text=text))
                 if attachment:
-                    mime_type = attachment.split(':')[1].split(';')[0]
+                    #print(f"Attachment: {attachment}")
+                    # 1. Extraer mime_type y datos en base64
+                    header, encoded = attachment.split(',', 1)
+                    mime_type = header.split(':')[1].split(';')[0]
+                    print(f"Mime type: {mime_type}")
+                    # 2. Decodificar de base64 a bytes
+                    file_bytes = base64.b64decode(encoded)
+                    
+                    decoded_bytes = io.BytesIO(file_bytes)
+
+                    #print(f"File bytes: {file_bytes}")
+                    
+                    # 3. Subir el archivo a MinIO y obtener la URL
+                    #file_url = minio_uploader.upload_file(file_bytes, mime_type)
+                    file_url = upload_file_google_file_api(decoded_bytes, mime_type)
+
+                    """ presigned_url = minio_uploader.client.get_presigned_url(
+                        "GET",
+                        minio_uploader.bucket_name,
+                        file_url.split("/")[-1],
+                        expires=timedelta(days=1),
+                    ) """
+
+                    print(f"Presigned URL: {file_url}")
+                    
+                    # 4. Enviar la URL al agente en lugar de los bytes
+                    content.append(FilePart(file=FileWithUri(uri=f"{file_url}")))
+                    #content.append(FilePart(file=FileWithBytes(bytes=encoded, mime_type=mime_type)))
+
+                    print(f"Content: {content}")
+
+                    """ mime_type = attachment.split(':')[1].split(';')[0]
                     attachment_bytes = attachment.split(',')[1]
-                    content.append(FilePart(file=FileWithBytes(bytes=attachment_bytes, mime_type=mime_type)))
+                    content.append(FilePart(file=FileWithBytes(bytes=attachment_bytes, mime_type=mime_type))) """
 
                 headers = {"x-mapfre-session-id": context_id}
                 call_context = gateway.build_propagation_context(headers)
-                print(f"Context: {call_context}")
+                #print(f"Context: {call_context}")
+                #print(f"Content: {content}")
 
                 # Envía el mensaje al agente y retransmite cada evento de vuelta al cliente WS
                 async for evt in gateway.send_message(

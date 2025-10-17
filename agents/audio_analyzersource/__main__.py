@@ -37,10 +37,10 @@ def main():
             http_handler=request_handler,
         )
         app = server.build()
-        app.add_middleware(
+        """ app.add_middleware(
             ObservabilityMiddleware,
             public_paths=["/.well-known/agent.json", "/.well-known/agent-card.json"],
-        )
+        ) """
 
         print("🚀 Starting audio analyzer agent ...")
         uvicorn.run(app, host="0.0.0.0", port=8080)
